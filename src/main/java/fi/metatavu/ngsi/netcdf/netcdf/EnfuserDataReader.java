@@ -80,7 +80,7 @@ public class EnfuserDataReader {
 
   private AirQualityObserved createAirQualityObserved(EntryLocationReference locationReference, OffsetDateTime originTime, OffsetDateTime sampleTime, Float no2, Float pm10, Float pm25, Float o3, Float aqi) {
     AirQualityObserved airQualityObserved = new AirQualityObserved();
-    airQualityObserved.setId(String.format("fmi::forecast::enfuser::airquality::helsinki-metropolitan::%d-%d", locationReference.getLatIndex(), locationReference.getLonIndex()));
+    airQualityObserved.setId(String.format(EnfuserConsts.ID_PATTERN, locationReference.getLatIndex(), locationReference.getLonIndex()));
     airQualityObserved.setAirQualityIndex(createAirPollutant(aqi));
     airQualityObserved.setNo2(createAirPollutant(no2));
     airQualityObserved.setPm10(createAirPollutant(pm10));

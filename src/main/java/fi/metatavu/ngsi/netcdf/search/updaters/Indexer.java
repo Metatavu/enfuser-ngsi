@@ -28,7 +28,7 @@ public class Indexer {
   
   @PostConstruct
   public void init() {
-    managedScheduledExecutorService.scheduleWithFixedDelay(netCdfFileUpdate, 5, 5, TimeUnit.MINUTES);
+    managedScheduledExecutorService.scheduleWithFixedDelay(netCdfFileUpdate, 5, 1, TimeUnit.MINUTES);
   }
   
 }

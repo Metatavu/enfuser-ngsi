@@ -9,6 +9,7 @@ import javax.inject.Inject;
 
 import org.slf4j.Logger;
 
+import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
 import fi.metatavu.ngsi.netcdf.netcdf.EnfuserDataReader;
 import fi.metatavu.ngsi.netcdf.search.index.EntryLocation;
 import fi.metatavu.ngsi.netcdf.search.index.GeoPoint;
@@ -66,7 +67,8 @@ public class NetCdfFileUpdate implements Runnable {
             Double latitude = latitudeArray.getDouble(latitudeIndex);
             Double longitude = longitudeArray.getDouble(longitudeIndex);
             GeoPoint geoPoint = GeoPoint.createGeoPoint(latitude, longitude);
-            EntryLocation entryLocation = new EntryLocation(geoPoint, latitudeIndex, longitudeIndex);
+            String entryId = String.format(EnfuserConsts.ID_PATTERN, latitudeIndex, longitudeIndex);
+            EntryLocation entryLocation = new EntryLocation(entryId, geoPoint, latitudeIndex, longitudeIndex);
             indexUpdater.index(entryLocation);
           }
         }

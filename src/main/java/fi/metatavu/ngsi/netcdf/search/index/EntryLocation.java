@@ -3,11 +3,15 @@ package fi.metatavu.ngsi.netcdf.search.index;
 import fi.metatavu.ngsi.netcdf.search.annotations.Field;
 
 public class EntryLocation implements Indexable {
-  
+
   public static final String TYPE = "entry-location";
+  public static final String ID_FIELD = "entryId";
   public static final String GEO_POINT_FIELD = "geoPoint";
   public static final String LAT_INDEX_FIELD = "latIndex";
   public static final String LON_INDEX_FIELD = "lonIndex";
+  
+  @Field(type="keyword", store = true)
+  private String entryId;
   
   @Field(type="geo_point", store = true)
   private GeoPoint geoPoint;
@@ -22,8 +26,9 @@ public class EntryLocation implements Indexable {
     // Zero-argument constructor
   }
   
-  public EntryLocation(GeoPoint geoPoint, Integer latIndex, Integer lonIndex) {
+  public EntryLocation(String entryId, GeoPoint geoPoint, Integer latIndex, Integer lonIndex) {
     super();
+    this.entryId = entryId;
     this.geoPoint = geoPoint;
     this.latIndex = latIndex;
     this.lonIndex = lonIndex;
@@ -37,6 +42,14 @@ public class EntryLocation implements Indexable {
   @Override
   public String getId() {
     return String.format("%d.%d", latIndex, lonIndex);
+  }
+  
+  public String getEntryId() {
+    return entryId;
+  }
+  
+  public void setEntryId(String entryId) {
+    this.entryId = entryId;
   }
   
   public GeoPoint getGeoPoint() {

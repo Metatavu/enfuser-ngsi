@@ -125,13 +125,12 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
       return createNotImplemented("Parameter mq is not supported yet");
     }
 
-    
-    // TODO: id, idPattern
     // TODO: limit, offset, orderBy
     // TODO: metadata,
     // TODO: options
 
     List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(
+        id, idPattern,
         GeoRel.fromString(georel), Geometry.fromParamName(geometry), Coordinates.fromString(coords));
 
     File file = new File("/home/belvain/otpdata/enfuser_hkimetro.nc");
