@@ -7,18 +7,26 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.slf4j.Logger;
+
+import fi.metatavu.ngsi.netcdf.netcdf.EnfuserDataReader;
 import fi.metatavu.ngsi.netcdf.search.index.EntryLocation;
 import fi.metatavu.ngsi.netcdf.search.index.GeoPoint;
 import fi.metatavu.ngsi.netcdf.search.io.IndexUpdater;
 import ucar.ma2.Array;
 import ucar.nc2.NetcdfFile;
 
+/**
+ * Enfuser data file updater
+ * 
+ * @author Antti Leppä
+ */
 @ApplicationScoped
 public class NetCdfFileUpdate implements Runnable {
-//  
-//  @Inject
-//  private NetCdfController netCdfController;
-//  
+  
+  @Inject
+  private Logger logger;
+  
   @Inject
   private IndexUpdater indexUpdater;
   
@@ -31,8 +39,6 @@ public class NetCdfFileUpdate implements Runnable {
   
   @Override
   public void run() {
-    System.out.println("Bollero");
-    
     File file = new File("/home/belvain/otpdata/enfuser_hkimetro.nc");
     if (file.lastModified() > lastModified) {
       updateFile(file);
@@ -40,36 +46,38 @@ public class NetCdfFileUpdate implements Runnable {
     }
   }
 
+  /**
+   * Updates ENFUSER data from a file
+   * 
+   * @param file file
+   */
   private void updateFile(File file) {
-//    System.out.println("Updateeraan");
-//    
-//    try {
-//      NetcdfFile netcdfFile = netCdfController.readNetcdfFile(file);
-//      
-//      netcdfFile.getVariables().stream().forEach((variable) -> {
-//        System.out.println( variable );
-//      });
-//      
-//      Array latitudeArray = netCdfController.getArray(netcdfFile, "lat");
-//      Array longitudeArray = netCdfController.getArray(netcdfFile, "lon");
-//      
-//      for (int latitudeIndex = 0; latitudeIndex < latitudeArray.getSize(); latitudeIndex++) {
-//        for (int longitudeIndex = 0; longitudeIndex < longitudeArray.getSize(); longitudeIndex++) {
-//          Double latitude = latitudeArray.getDouble(latitudeIndex);
-//          Double longitude = longitudeArray.getDouble(longitudeIndex);
-//          GeoPoint geoPoint = GeoPoint.createGeoPoint(latitude, longitude);
-//          EntryLocation entryLocation = new EntryLocation(geoPoint, latitudeIndex, longitudeIndex);
-//          indexUpdater.index(entryLocation);
-//        }
-//      }
-//      
-//    } catch (IOException e) {
-//      // TODO Auto-generated catch block
-//      e.printStackTrace();
-//    }
-//    
-//    // TODO Auto-generated method stub
-//    
+    logger.info("Updating Enfuser data");
+    
+    try {
+      try (NetcdfFile netcdfFile = NetcdfFile.open(file.getAbsolutePath())) {
+        EnfuserDataReader enfuserDataReader = new EnfuserDataReader(netcdfFile);
+
+        Array latitudeArray = enfuserDataReader.getLatitudeArray();
+        Array longitudeArray = enfuserDataReader.getLongitudeArray();
+        
+        for (int latitudeIndex = 0; latitudeIndex < latitudeArray.getSize(); latitudeIndex++) {
+          for (int longitudeIndex = 0; longitudeIndex < longitudeArray.getSize(); longitudeIndex++) {
+            Double latitude = latitudeArray.getDouble(latitudeIndex);
+            Double longitude = longitudeArray.getDouble(longitudeIndex);
+            GeoPoint geoPoint = GeoPoint.createGeoPoint(latitude, longitude);
+            EntryLocation entryLocation = new EntryLocation(geoPoint, latitudeIndex, longitudeIndex);
+            indexUpdater.index(entryLocation);
+          }
+        }
+      }
+
+      logger.info("Updated Enfuser data");      
+    } catch (IOException e) {
+      logger.error("Failed to update Enfuser data", e);
+    }
+
+
   }
 
 }

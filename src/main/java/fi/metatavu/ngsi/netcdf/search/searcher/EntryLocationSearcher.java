@@ -21,7 +21,6 @@ import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.geo.builders.CoordinatesBuilder;
 import org.elasticsearch.common.geo.builders.LineStringBuilder;
-import org.elasticsearch.common.geo.builders.PointBuilder;
 import org.elasticsearch.common.geo.builders.PolygonBuilder;
 import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.unit.DistanceUnit;
@@ -41,6 +40,7 @@ import fi.metatavu.ngsi.netcdf.search.io.IndexReader;
 public class EntryLocationSearcher {
   
   private static final int DEFALT_MAX_RESULTS = 999;
+  
   @Inject
   private IndexReader indexReader;
   
@@ -95,12 +95,14 @@ public class EntryLocationSearcher {
     return executeSearch(query, fields, null, null, Collections.emptyList());
   }
   
-  private ShapeBuilder getShape(Geometry geometry, Coordinates coordinates) {
+  private ShapeBuilder<?, ?> getShape(Geometry geometry, Coordinates coordinates) {
     switch (geometry) {
       case LINE:
         return getLine(coordinates);
       case POLYGON:
         return getPolygon(coordinates);
+	  default:
+	  break;
     }
     
     return null;
@@ -131,7 +133,7 @@ public class EntryLocationSearcher {
     
     return coordinatesBuilder;
   }
-
+  
   /**
    * Executes a search and returns result as UUIDs
    * 
@@ -145,7 +147,7 @@ public class EntryLocationSearcher {
     SearchRequestBuilder requestBuilder = indexReader
       .requestBuilder(getType())
       .setQuery(query)
-      .fields(fields)
+      .storedFields(fields)
       .setFrom(firstResult != null ? firstResult.intValue() : 0)
       .setSize(maxResults != null ? maxResults.intValue() : DEFALT_MAX_RESULTS);
 

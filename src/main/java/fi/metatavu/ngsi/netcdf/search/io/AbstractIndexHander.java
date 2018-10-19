@@ -33,7 +33,6 @@ public abstract class AbstractIndexHander {
   private static final String DEFAULT_CLUSTERNAME = "elasticsearch";
   private static final String DEFAULT_HOSTS = "localhost:9300";
 
-  
   @Inject
   private Logger logger;
   

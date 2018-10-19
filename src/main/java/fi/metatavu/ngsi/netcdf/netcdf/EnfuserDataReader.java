@@ -23,7 +23,6 @@ import fi.metatavu.ngsi.netcdf.fiware.LocationValue;
 import fi.metatavu.ngsi.netcdf.fiware.Source;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayFloat;
-import ucar.ma2.ArrayFloat.D3;
 import ucar.ma2.InvalidRangeException;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
@@ -91,10 +90,21 @@ public class EnfuserDataReader {
     airQualityObserved.setSource(createSource());
     airQualityObserved.setType(TYPE);
     airQualityObserved.setDateCreated(createDateObserved(originTime));
+    airQualityObserved.setDateModified(createDateObserved(originTime));
     airQualityObserved.setDateObserved(createDateObserved(sampleTime));
     airQualityObserved.setLocation(createLoaction(locationReference));
     
     return airQualityObserved;
+  }
+
+  public Array getLatitudeArray() throws IOException {
+    Variable variable = getVariable(latitudeVariableName);
+    return variable.read();
+  }
+
+  public Array getLongitudeArray() throws IOException {
+    Variable variable = getVariable(longitudeVariableName);
+    return variable.read();
   }
   
   private Location createLoaction(EntryLocationReference locationReference) {

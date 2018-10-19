@@ -31,6 +31,8 @@ public class AirQualityObserved {
     private String type;
     @JsonProperty("dateCreated")
     private DateTime dateCreated;
+    @JsonProperty("dateModified")
+    private DateTime dateModified;
     @JsonProperty("dateObserved")
     private DateTime dateObserved;
     @JsonProperty("airQualityLevel")
@@ -102,6 +104,14 @@ public class AirQualityObserved {
     
     public void setDateCreated(DateTime dateCreated) {
       this.dateCreated = dateCreated;
+    }
+    
+    public DateTime getDateModified() {
+      return dateModified;
+    }
+    
+    public void setDateModified(DateTime dateModified) {
+      this.dateModified = dateModified;
     }
 
     @JsonProperty("dateObserved")

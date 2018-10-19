@@ -1,9 +1,6 @@
 package fi.metatavu.ngsi.netcdf.api;
 
-import javax.inject.Inject;
 import javax.ws.rs.core.Response;
-
-import org.slf4j.Logger;
 
 /**
  * Abstract base class for all services
@@ -35,6 +32,19 @@ public abstract class AbstractApi {
   protected Response createNotImplemented(String message) {
     return Response
       .status(Response.Status.NOT_IMPLEMENTED)
+      .entity(message)
+      .build();
+  }
+  
+  /**
+   * Constructs not bad request response
+   * 
+   * @param message message
+   * @return response
+   */
+  protected Response createBadRequest(String message) {
+    return Response
+      .status(Response.Status.BAD_REQUEST)
       .entity(message)
       .build();
   }

@@ -10,6 +10,11 @@ import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+/**
+ * Index initializer class
+ * 
+ * @author Antti Leppä
+ */
 @ApplicationScoped
 @Startup
 @Singleton
@@ -23,7 +28,7 @@ public class Indexer {
   
   @PostConstruct
   public void init() {
-    managedScheduledExecutorService.scheduleWithFixedDelay(netCdfFileUpdate, 2, 5, TimeUnit.SECONDS);
+    managedScheduledExecutorService.scheduleWithFixedDelay(netCdfFileUpdate, 5, 5, TimeUnit.MINUTES);
   }
   
 }
