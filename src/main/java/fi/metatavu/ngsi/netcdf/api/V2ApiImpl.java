@@ -124,13 +124,21 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     if (mq != null) {
       return createNotImplemented("Parameter mq is not supported yet");
     }
-    
+
+    if (orderBy != null) {
+      return createNotImplemented("Parameter orderBy is not supported yet");
+    }
+
+    if (metadata != null) {
+      return createNotImplemented("Parameter orderBy is not supported yet");
+    }
+
+    if (options != null) {
+      return createNotImplemented("Parameter options is not supported yet");
+    }
+
     Long firstResult = offset != null ? offset.longValue() : 0l;
     Long maxResults = limit != null ? limit.longValue() : 0l;
-    
-    // TODO: orderBy
-    // TODO: metadata,
-    // TODO: options
 
     List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(
         id, idPattern,
