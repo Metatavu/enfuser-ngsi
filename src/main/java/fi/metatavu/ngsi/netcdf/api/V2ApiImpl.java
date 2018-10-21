@@ -3,8 +3,6 @@ package fi.metatavu.ngsi.netcdf.api;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
-import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
@@ -14,8 +12,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
 import java.util.stream.Collectors;
 
 import javax.ejb.Stateful;
@@ -25,6 +21,7 @@ import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
 
 import fi.metatavu.ngsi.netcdf.api.model.CreateEntityRequest;
 import fi.metatavu.ngsi.netcdf.api.model.CreateRegistrationRequest;
@@ -46,7 +43,6 @@ import fi.metatavu.ngsi.netcdf.query.Coordinates;
 import fi.metatavu.ngsi.netcdf.query.GeoRel;
 import fi.metatavu.ngsi.netcdf.query.Geometry;
 import fi.metatavu.ngsi.netcdf.search.searcher.EntryLocationSearcher;
-import ucar.nc2.NetcdfFile;
 
 @RequestScoped
 @Stateful
@@ -102,11 +98,24 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
   @Override
   public Response getAttributeValue(String entityId, String attrName, String type) throws Exception {
+    if (type != null && !SUPPORTED_TYPE.matches(type)) {
+      return createNotFound("Not found");
+    }
     
+    AirQualityObserved entry = findAirQualityObservedById(entityId);
+    if (entry == null) {
+      return createNotFound("Not found");
+    }
     
-    // TODO Auto-generated method stub
-    return null;
-  }
+    Object attr = getObjectValue(entry, AirQualityObserved.class, attrName);
+    Object value = attr == null ? null : getObjectValue(attr, attr.getClass(), "value");
+
+    if (value == null) {
+      return createNoContent();
+    }
+    
+    return Response.ok().entity(value).build();    
+  } 
 
   @Override
   public Response listEntities(String id, String type, String idPattern, String typePattern, String q, String mq,

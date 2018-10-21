@@ -49,6 +49,18 @@ public abstract class AbstractApi {
       .build();
   }
   
+
+  /**
+   * Constructs no content
+   * 
+   * @return response
+   */
+  protected Response createNoContent() {
+    return Response
+      .status(Response.Status.NOT_FOUND)
+      .build();
+  }
+  
   /**
    * Constructs not bad request response
    * 
