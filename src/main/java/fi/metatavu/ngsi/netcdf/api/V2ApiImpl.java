@@ -36,6 +36,7 @@ import fi.metatavu.ngsi.netcdf.api.model.UpdateOrAppendEntityAttributesRequest;
 import fi.metatavu.ngsi.netcdf.api.model.UpdateRegistrationRequest;
 import fi.metatavu.ngsi.netcdf.api.model.UpdateRequest;
 import fi.metatavu.ngsi.netcdf.api.model.UpdateSubscriptionRequest;
+import fi.metatavu.ngsi.netcdf.fiware.APIResources;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityObserved;
 import fi.metatavu.ngsi.netcdf.netcdf.EnfuserDataReader;
 import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
@@ -171,33 +172,27 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
   @Override
   public Response listEntityTypes(Double limit, Double offset, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
   public Response listRegistrations(Double limit, Double offset, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
   public Response listSubscriptions(Double limit, Double offset, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
   public Response notify(String contentType, NotifyRequest body, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
-  public Response query(String contentType, QueryRequest body, Double limit, Double offset, String orderBy,
-      String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+  public Response query(String contentType, QueryRequest body, Double limit, Double offset, String orderBy, String options) throws Exception {
+    return createNotSupported();
   }
 
   @Override
@@ -218,26 +213,28 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
   @Override
   public Response retrieveAPIResources() throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
   public Response retrieveEntity(String entityId, String type, String attrs, String metadata, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    APIResources resources = new APIResources();
+    
+    resources.setEntitiesUrl("/v2/entities");
+    resources.setSubscriptionsUrl("/v2/types");
+    resources.setTypesUrl("/v2/subscriptions");
+      
+    return Response.ok().entity(resources).build();
   }
 
   @Override
   public Response retrieveEntityAttributes(String entityId, String type, String attrs, String metadata, String options) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override
   public Response retrieveEntityType(String entityType) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return createNotSupported();
   }
 
   @Override

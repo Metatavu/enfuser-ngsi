@@ -7,7 +7,7 @@ Implementation is based on FIWARE-NGSI v2 Specification: https://orioncontextbro
 Limitations
 ===========
 
-Server does not fully implement whole specification. Implementation does not support data modification, subscriptions or registrations.
+Server does not fully implement whole specification. Implementation does not support data modification, types, notifications, subscriptions, registrations or batch operations.
 
 There are also number of limitations in specific methods:
 
