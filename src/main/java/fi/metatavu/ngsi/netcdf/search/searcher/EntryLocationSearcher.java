@@ -60,7 +60,7 @@ public class EntryLocationSearcher {
    * @return matching entry location references
    * @throws IOException thrown when searching fails
    */
-  public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, GeoRel geoRel, Geometry geometry, Coordinates coordinates) throws IOException {
+  public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, GeoRel geoRel, Geometry geometry, Coordinates coordinates, Long firstResult, Long maxResults) throws IOException {
     BoolQueryBuilder query = boolQuery();
     
     if (StringUtils.isNotBlank(id)) {
@@ -78,7 +78,7 @@ public class EntryLocationSearcher {
       query.must(geoQuery);
     }
     
-    SearchResponse searchResponse = executeSearch(query, EntryLocation.LAT_INDEX_FIELD, EntryLocation.LON_INDEX_FIELD);
+    SearchResponse searchResponse = executeSearch(query, firstResult, maxResults, EntryLocation.LAT_INDEX_FIELD, EntryLocation.LON_INDEX_FIELD);
     
     return Arrays.stream(searchResponse.getHits().getHits()).map((hit) -> {
       Map<String, DocumentField> fields = hit.getFields();
@@ -149,8 +149,8 @@ public class EntryLocationSearcher {
    * @param fields queried fields
    * @return response
    */
-  private SearchResponse executeSearch(QueryBuilder query, String... fields) {
-    return executeSearch(query, fields, null, null, Collections.emptyList());
+  private SearchResponse executeSearch(QueryBuilder query, Long firstResult, Long maxResults, String... fields) {
+    return executeSearch(query, fields, firstResult, maxResults, Collections.emptyList());
   }
   
   /**
