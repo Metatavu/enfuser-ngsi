@@ -4,6 +4,7 @@ import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.OffsetDateTime;
@@ -87,12 +88,22 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
   @Override
   public Response getAttributeData(String entityId, String attrName, String type, String metadata) throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    if (type != null && !SUPPORTED_TYPE.matches(type)) {
+      return createNotFound("Not found");
+    }
+    
+    AirQualityObserved entry = findAirQualityObservedById(entityId);
+    if (entry == null) {
+      return createNotFound("Not found");
+    }
+    
+    return Response.ok().entity(getObjectValue(entry, AirQualityObserved.class, attrName)).build();
   }
 
   @Override
   public Response getAttributeValue(String entityId, String attrName, String type) throws Exception {
+    
+    
     // TODO Auto-generated method stub
     return null;
   }
@@ -133,21 +144,15 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
       return createNotImplemented("Parameter orderBy is not supported yet");
     }
 
-    if (options != null) {
-      return createNotImplemented("Parameter options is not supported yet");
-    }
-
     Long firstResult = offset != null ? offset.longValue() : 0l;
-    Long maxResults = limit != null ? limit.longValue() : 0l;
+    Long maxResults = limit != null ? limit.longValue() : 20l;
 
     List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(
         id, idPattern,
         GeoRel.fromString(georel), Geometry.fromParamName(geometry), Coordinates.fromString(coords),
         firstResult, maxResults);
 
-    File file = new File("/home/belvain/otpdata/enfuser_hkimetro.nc");
-    NetcdfFile enfuserFile = NetcdfFile.open(file.getAbsolutePath());
-    EnfuserDataReader enfuserDataReader = new EnfuserDataReader(enfuserFile);
+    EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
     OffsetDateTime time = OffsetDateTime.now();
 
     List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, time);
@@ -284,6 +289,25 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
       .map(result -> this.filterResultAttrs(result, attrs, options))
       .collect(Collectors.toList());
   }
+  
+  private Object getObjectValue(Object entity, Class<?> objectClass, String propertyName) {
+    if (entity == null || propertyName == null) {
+      return null;
+    }
+    
+    PropertyDescriptor propertyDescriptor = getPropertyDescriptor(objectClass, propertyName);
+    if (propertyDescriptor == null) {
+      return null;
+    }
+    
+    try {
+      return propertyDescriptor.getReadMethod().invoke(entity);
+    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+      logger.error("Failed to get attribute value");
+    }
+    
+    return null;
+  }
 
   /**
    * Filters result by attrs
@@ -300,13 +324,7 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
     List<String> includeAttributes = parseCDT(attrs);
     List<String> includeOptions = parseCDT(options);
-    
-    PropertyDescriptor[] propertyDescriptors;
-    try {
-      propertyDescriptors = Introspector.getBeanInfo(AirQualityObserved.class).getPropertyDescriptors();
-    } catch (IntrospectionException e1) {
-      return result;
-    }
+    PropertyDescriptor[] propertyDescriptors = getPropertyDescriptors(AirQualityObserved.class);
     
     List<String> excludeAttributes = includeAttributes.isEmpty() ? new ArrayList<>() :  Arrays.stream(propertyDescriptors)
       .map(PropertyDescriptor::getName)
@@ -341,6 +359,39 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
 
     return result;
   }
+
+  /**
+   * Returns property descriptor for an object
+   * 
+   * @param objectClass object class
+   * @param propertyName property name
+   * @return property descriptor or null if not found
+   */
+  private PropertyDescriptor getPropertyDescriptor(Class<?> objectClass, String propertyName) {
+    PropertyDescriptor[] propertyDescriptors = getPropertyDescriptors(objectClass);
+    for (int i = 0; i < propertyDescriptors.length; i++) {
+      if (propertyName.equals(propertyDescriptors[i].getName())) {
+        return propertyDescriptors[i];
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Returns property descriptors for an entity
+   * 
+   * @return property descriptors
+   */
+  private PropertyDescriptor[] getPropertyDescriptors(Class<?> objectClass) {
+    try {
+      return Introspector.getBeanInfo(objectClass).getPropertyDescriptors();
+    } catch (IntrospectionException e1) {
+      logger.error("Failed to resolve property descriptors");
+    }
+    
+    return new PropertyDescriptor[0];
+  }
   
   /**
    * Returns comma delimited text as string list 
@@ -354,6 +405,24 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     }
     
     return Arrays.asList(StringUtils.split(text, ","));
+  }
+
+  private AirQualityObserved findAirQualityObservedById(String id) {
+    EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
+    OffsetDateTime time = OffsetDateTime.now();
+
+    try {
+      List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(id, null, null, null, null, 0l, 1l);
+      List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, time);
+
+      if (!result.isEmpty()) {
+        return result.get(0);
+      }
+    } catch (Exception e) {
+      logger.error("Failed to find air quality entry", e);
+    } 
+
+    return null;
   }
   
 }

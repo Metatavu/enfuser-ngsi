@@ -1,5 +1,6 @@
 package fi.metatavu.ngsi.netcdf.netcdf;
 
+import java.io.File;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -14,6 +15,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import fi.metatavu.ngsi.netcdf.SystemConsts;
 import fi.metatavu.ngsi.netcdf.fiware.AirPollutant;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityLevel;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityObserved;
@@ -32,7 +34,7 @@ public class EnfuserDataReader {
 
   private static final String SOURCE = "https://en.ilmatieteenlaitos.fi/environmental-information-fusion-service";
   private static final String TYPE = "AirQualityObserved";
-
+  
   private static Logger logger = LoggerFactory.getLogger(EnfuserDataReader.class); 
   
   private NetcdfFile file;
@@ -45,8 +47,14 @@ public class EnfuserDataReader {
   private String aqiVariableName = "aqindex_194";
   private String o3VariableName = "O3Concentration_4904";
   
-  public EnfuserDataReader(NetcdfFile file) {
-    this.file = file;
+  public EnfuserDataReader() {
+    try {
+      File file = new File(System.getProperty(SystemConsts.INPUT_FILE_PROPERTY));
+      this.file = NetcdfFile.open(file.getAbsolutePath());
+    } catch (IOException e) {
+      logger.error("Failed to read input file");
+      System.exit(-1);
+    }
   }
   
   public List<AirQualityObserved> getAirQualityObserved(List<EntryLocationReference> locationReferences, OffsetDateTime time) throws Exception {

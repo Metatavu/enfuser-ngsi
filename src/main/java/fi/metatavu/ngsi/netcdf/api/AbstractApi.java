@@ -35,6 +35,19 @@ public abstract class AbstractApi {
       .entity(message)
       .build();
   }
+
+  /**
+   * Constructs not found response
+   * 
+   * @param message message
+   * @return response
+   */
+  protected Response createNotFound(String message) {
+    return Response
+      .status(Response.Status.NOT_FOUND)
+      .entity(message)
+      .build();
+  }
   
   /**
    * Constructs not bad request response

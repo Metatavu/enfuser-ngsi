@@ -21,6 +21,10 @@ public class Coordinates {
   }
   
   public static Coordinates fromString(String coordsString) {
+    if (StringUtils.isBlank(coordsString)) {
+      return null;
+    }
+    
     List<Coordinate> coordinateList = Arrays.stream(StringUtils.split(coordsString, ";")).map((coordString) -> {
       String[] pair = StringUtils.split(coordString, ",");
       if (pair.length == 2) {

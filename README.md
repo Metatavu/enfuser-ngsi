@@ -13,5 +13,5 @@ There are also number of limitations in specific methods:
 
 List entities -endpoint 
 -----------------------
-Does not support following parameters: q, mq, orderBy, metadata or options -parameters.
+Does not support following parameters: q, mq, orderBy, metadata.
 
