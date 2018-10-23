@@ -1,6 +1,7 @@
 package fi.metatavu.ngsi.netcdf.query;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -42,10 +43,12 @@ public class SimpleQuery {
    * @return parsed query
    */
   public static SimpleQuery fromString(String string) {
-    List<SimpleQueryItem> items = Arrays.stream(StringUtils.split(string, ';'))
-      .map(SimpleQueryItem::fromString)
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    List<SimpleQueryItem> items = StringUtils.isBlank(string) 
+      ? Collections.emptyList() 
+      : Arrays.stream(StringUtils.split(string, ';'))
+          .map(SimpleQueryItem::fromString)
+          .filter(Objects::nonNull)
+          .collect(Collectors.toList());
     
     return new SimpleQuery(items);
   }
