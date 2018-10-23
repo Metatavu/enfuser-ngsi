@@ -1,0 +1,21 @@
+language: java
+sudo: required
+jdk: openjdk8
+cache:
+  directories:
+  - $HOME/.sonar
+  - $HOME/.m2
+  
+addons:
+  sonarcloud:
+    organization: "metatavu-oy"
+          
+install: true
+  
+script:
+  - . travis.sh
+
+notifications:
+  email: false
+  webhooks:
+    - http://travis.metatavu.io:7333/travisping
