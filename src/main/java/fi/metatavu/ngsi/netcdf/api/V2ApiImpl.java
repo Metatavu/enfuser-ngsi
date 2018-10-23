@@ -43,6 +43,8 @@ import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
 import fi.metatavu.ngsi.netcdf.query.Coordinates;
 import fi.metatavu.ngsi.netcdf.query.GeoRel;
 import fi.metatavu.ngsi.netcdf.query.Geometry;
+import fi.metatavu.ngsi.netcdf.query.SimpleQuery;
+import fi.metatavu.ngsi.netcdf.query.SimpleQueryItem;
 import fi.metatavu.ngsi.netcdf.search.searcher.EntryLocationSearcher;
 
 @RequestScoped
@@ -137,11 +139,33 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
         return Response.ok().entity(Collections.emptyList()).build();
       }
     }
-    
-    if (q != null) {
-      return createNotImplemented("Parameter q is not supported yet");
-    }
 
+    OffsetDateTime observedBefore = null;
+    OffsetDateTime observedAfter = null;
+
+    SimpleQuery query = SimpleQuery.fromString(q);
+    for (SimpleQueryItem queryItem : query.getItems()) {
+      if ("dateObserved".equals(queryItem.getLhs())) {
+        OffsetDateTime rhsTime = OffsetDateTime.parse(queryItem.getRhs());
+        if (rhsTime == null) {
+          return createNotImplemented(String.format("Invalid valud %s for attribute %s", queryItem.getRhs(), queryItem.getLhs()));
+        }
+        
+        switch (queryItem.getOp()) {
+          case GREATER_THAN_OR_EQUAL:
+            observedAfter = rhsTime;
+          break;
+          case LESS_THAN_OR_EQUAL:
+            observedBefore = rhsTime;
+          break;
+          default:
+            return createNotImplemented(String.format("Operator %s not supported for q", queryItem.getOp()));
+        }
+      } else {
+        return createNotImplemented(String.format("Using attribute %s is not supported in q", queryItem.getLhs()));
+      }
+    }
+    
     if (mq != null) {
       return createNotImplemented("Parameter mq is not supported yet");
     }
@@ -163,9 +187,8 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
         firstResult, maxResults);
 
     EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
-    OffsetDateTime time = OffsetDateTime.now();
-
-    List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, time);
+    
+    List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, observedBefore, observedAfter);
 
     return Response.ok().entity(filterResultAttrs(result, attrs, options)).build();
   }
@@ -413,13 +436,19 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     return Arrays.asList(StringUtils.split(text, ","));
   }
 
+  /**
+   * Finds air quality observed by id
+   * 
+   * @param id id
+   * @return found entity or null if not found
+   */
   private AirQualityObserved findAirQualityObservedById(String id) {
     EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
     OffsetDateTime time = OffsetDateTime.now();
 
     try {
       List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(id, null, null, null, null, 0l, 1l);
-      List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, time);
+      List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, null, null);
 
       if (!result.isEmpty()) {
         return result.get(0);

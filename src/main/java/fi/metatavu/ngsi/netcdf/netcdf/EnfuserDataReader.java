@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -57,10 +58,32 @@ public class EnfuserDataReader {
     }
   }
   
-  public List<AirQualityObserved> getAirQualityObserved(List<EntryLocationReference> locationReferences, OffsetDateTime time) throws Exception {
+  public List<AirQualityObserved> getAirQualityObserved(List<EntryLocationReference> locationReferences, OffsetDateTime beforeTime, OffsetDateTime afterTime) throws Exception {
     Variable timeVariable = getVariable(timeVariableName);
     OffsetDateTime originTime = getOriginTime(timeVariable);
-    int timeIndex = getTimeIndexClosestTo(originTime, time);
+    
+    int fromTimeIndex;
+    int toTimeIndex;
+    
+    if (beforeTime != null || afterTime != null) {
+      fromTimeIndex = afterTime != null ? getTimeIndex(originTime, afterTime) : 0;
+      toTimeIndex = beforeTime != null ? getTimeIndex(originTime, beforeTime) : timeVariableName.length() - 1;
+    } else {
+      OffsetDateTime now = OffsetDateTime.now();
+      fromTimeIndex = getTimeIndexClosestTo(originTime, now);
+      toTimeIndex = getTimeIndexClosestTo(originTime, now);
+    }
+
+    List<AirQualityObserved> result = new ArrayList<>();
+    
+    for (int timeIndex = fromTimeIndex; timeIndex <= toTimeIndex; timeIndex++) {
+      result.addAll(getAirQualityObservedForTime(locationReferences, originTime, timeIndex));
+    }
+    
+    return result;
+  }
+
+  private List<AirQualityObserved> getAirQualityObservedForTime(List<EntryLocationReference> locationReferences, OffsetDateTime originTime, int timeIndex) {
     OffsetDateTime sampleTime = originTime.plusHours(timeIndex);
     
     return locationReferences.stream()
@@ -204,8 +227,20 @@ public class EnfuserDataReader {
     }
   }
   
+  private int getTimeIndex(OffsetDateTime originTime, OffsetDateTime requestTime) throws Exception {  
+    return (int) ChronoUnit.HOURS.between(originTime, requestTime);
+  }
+  
+  /**
+   * Returns closest available time index for a time
+   * 
+   * @param originTime NetCDF start time
+   * @param requestTime requested time
+   * @return closest time index for requested time
+   * @throws Exception thrown when time resolving fails
+   */
   private int getTimeIndexClosestTo(OffsetDateTime originTime, OffsetDateTime requestTime) throws Exception {
-    int airQualityHour = (int) ChronoUnit.HOURS.between(originTime, requestTime);
+    int airQualityHour = getTimeIndex(originTime, requestTime);
     int maxIndex = timeVariableName.length() - 1;
     
     if (airQualityHour > maxIndex) {
@@ -219,6 +254,12 @@ public class EnfuserDataReader {
     return airQualityHour;    
   }
   
+  /**
+   * Returns air quality level for an air quality index
+   * 
+   * @param aqi air quality index
+   * @return air quality level
+   */
   private String getAirQualityLevel(Float aqi) {
     if (aqi == null) {
       return null;
