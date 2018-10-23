@@ -49,7 +49,7 @@
     
     <!-- Spec -->
 
-    <enfuser-ngsi-server-spec.version>0.0.1-SNAPSHOT</enfuser-ngsi-server-spec.version>
+    <enfuser-ngsi-server-spec.version>0.0.1</enfuser-ngsi-server-spec.version>
     
     <!-- Maven -->
 
