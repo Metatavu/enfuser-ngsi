@@ -42,13 +42,19 @@ public class EnfuserDataReader {
   private String timeVariableName = "time";
   private String latitudeVariableName = "lat";
   private String longitudeVariableName = "lon";
-  private String no2VariableName = "NO2concentration_4902";
-  private String pm10VariableName = "PM10Concentration_4904";
-  private String pm25VariableName = "PM25concentration_4905";
-  private String aqiVariableName = "aqindex_194";
-  private String o3VariableName = "O3Concentration_4904";
+  private String no2VariableName;
+  private String pm10VariableName;
+  private String pm25VariableName;
+  private String aqiVariableName;
+  private String o3VariableName;
   
   public EnfuserDataReader() {
+    this.no2VariableName = System.getProperty(EnfuserConsts.NO2_VARIABLE_PROPERTY);
+    this.pm10VariableName = System.getProperty(EnfuserConsts.PM10_VARIABLE_PROPERTY);
+    this.pm25VariableName = System.getProperty(EnfuserConsts.PM25_VARIABLE_PROPERTY);
+    this.aqiVariableName = System.getProperty(EnfuserConsts.AQI_VARIABLE_PROPERTY);
+    this.o3VariableName = System.getProperty(EnfuserConsts.O3_VARIABLE_PROPERTY);
+
     try {
       File file = new File(System.getProperty(SystemConsts.INPUT_FILE_PROPERTY));
       this.file = NetcdfFile.open(file.getAbsolutePath());
