@@ -13,5 +13,9 @@ There are also number of limitations in specific methods:
 
 List entities -endpoint 
 -----------------------
-Does not support following parameters: q, mq, orderBy, metadata.
+
+Notes on the endpoint:
+
+- Does not support following parameters: q, mq, metadata. 
+- Only geo:distance orderBy is currently  supported
 
