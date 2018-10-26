@@ -4,9 +4,11 @@ import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.ejb.Lock;
@@ -17,10 +19,16 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
+import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.slf4j.Logger;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import fi.metatavu.ngsi.netcdf.search.index.EntryLocation;
@@ -46,24 +54,37 @@ public class IndexUpdater extends AbstractIndexHander {
   }
 
   /**
-   * Indexes an indexable
+   * Indexes an indexables
+   * 
+   * @param indexables list of indexable entities
    */
   @Lock (LockType.READ)
-  public void index(Indexable indexable) {
+  public void index(List<Indexable> indexables) {
     if (!isEnabled()) {
       logger.warn("Could not index entity. Search functions are disabled");
       return;
     }
-
-    if (indexable == null) {
-      logger.warn("Indexable is null");
-      return;
-    }
     
-    getClient().prepareIndex(getIndex(), indexable.getType(), indexable.getId().toString())
-      .setSource(serialize(indexable), XContentType.JSON)
-      .execute()
-      .actionGet();
+    BulkRequest request = new BulkRequest();
+    
+    indexables.stream()
+      .map((indexable) -> {
+        return new IndexRequest(getIndex(), indexable.getType(), indexable.getId())
+          .source(serialize(indexable), XContentType.JSON);
+      })
+      .forEach(request::add);
+    
+    getClient().bulkAsync(request, RequestOptions.DEFAULT, new ActionListener<BulkResponse>() {
+      
+      @Override
+      public void onResponse(BulkResponse response) {
+      }
+      
+      @Override
+      public void onFailure(Exception e) {
+        logger.error("Failed to index", e);
+      }
+    });
   }
   
   /**
@@ -76,10 +97,12 @@ public class IndexUpdater extends AbstractIndexHander {
       return;
     }
     
-    getClient()
-      .prepareDelete(getIndex(), type, id)
-      .execute()
-      .actionGet();
+    DeleteRequest deleteRequest = new DeleteRequest(getIndex(), type, id);
+    try {
+      getClient().delete(deleteRequest, RequestOptions.DEFAULT);
+    } catch (IOException e) {
+      logger.error("Failed to remove item", e);
+    }
   }
   
   /**
@@ -119,7 +142,6 @@ public class IndexUpdater extends AbstractIndexHander {
     if (superclass == null || superclass.equals(Object.class)) {
       return;
     }
-    
     
     readProperties((Class<? extends Indexable>) indexable.getSuperclass(), properties);
   }
@@ -177,16 +199,11 @@ public class IndexUpdater extends AbstractIndexHander {
       mapping.put("properties", properties);
       String source = objectMapper.writeValueAsString(mapping);
       
-      getClient()
-        .admin()
-        .indices()
-        .preparePutMapping(getIndex())
-        .setType(type)
-        .setSource(source, XContentType.JSON)
-        .execute()
-        .actionGet();
-      
-    } catch (JsonProcessingException e) {
+      PutMappingRequest putMappingRequest = new PutMappingRequest(getIndex()).type(type);
+      putMappingRequest.source(source, XContentType.JSON);
+
+      getClient().indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+    } catch (IOException e) {
       logger.error("Failed to serialize mapping update properties", e);
     }
   }

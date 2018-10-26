@@ -8,7 +8,7 @@ package fi.metatavu.ngsi.netcdf.netcdf;
 public class EnfuserConsts {
 
   public static final String ID_PREFIX = "fmi::forecast::enfuser::airquality::helsinki-metropolitan::";
-  public static final String ID_PATTERN = String.format("%s%s", ID_PREFIX, "%d-%d");
+  public static final String ID_PATTERN = String.format("%s%s", ID_PREFIX, "%d-%d-%d");
   public static final String NO2_VARIABLE_PROPERTY = "enfuser-no2";
   public static final String PM10_VARIABLE_PROPERTY = "enfuser-pm10";
   public static final String PM25_VARIABLE_PROPERTY = "enfuser-pm25";

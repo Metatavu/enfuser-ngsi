@@ -1,8 +1,6 @@
 package fi.metatavu.ngsi.netcdf.search.io;
 
 import javax.ejb.DependsOn;
-import javax.ejb.Lock;
-import javax.ejb.LockType;
 import javax.ejb.Singleton;
 import javax.enterprise.context.ApplicationScoped;
 
@@ -21,20 +19,7 @@ public class IndexReader extends AbstractIndexHander {
   public void setup() {
     // No setup needed for reader
   }
- 
-  /**
-   * Creates a request builder
-   * 
-   * @param types types
-   * @return  a request builder
-   */
-  @Lock (LockType.READ)
-  public SearchRequestBuilder requestBuilder(String... types) {
-    return getClient()
-      .prepareSearch(getIndex())
-      .setTypes(types);
-  }
-  
+
   /**
    * Executes a search
    * 

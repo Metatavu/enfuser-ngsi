@@ -1,7 +1,8 @@
 package fi.metatavu.ngsi.netcdf.search.io;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -9,11 +10,12 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.common.transport.TransportAddress;
-import org.elasticsearch.transport.client.PreBuiltTransportClient;
+import org.apache.http.HttpHost;
+import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
+import org.elasticsearch.action.admin.indices.get.GetIndexRequest;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.slf4j.Logger;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,27 +33,41 @@ public abstract class AbstractIndexHander {
   
   private static final String DEFAULT_INDEX = "enfuser-ngsi";
   private static final String DEFAULT_CLUSTERNAME = "elasticsearch";
-  private static final String DEFAULT_HOSTS = "localhost:9300";
+  private static final String DEFAULT_HOSTS = "192.168.2.125:9200,192.168.2.125:9201";
 
   @Inject
   private Logger logger;
   
   private String index;
   
-  private TransportClient client;
+  private RestHighLevelClient client;
   
   /**
    * Post construct method
    */
   @PostConstruct
   public void init() {
-    String[] hosts = StringUtils.split(getSettingValue(SearchConsts.ELASTIC_HOSTS, DEFAULT_HOSTS));
+    String[] hosts = StringUtils.split(getSettingValue(SearchConsts.ELASTIC_HOSTS, DEFAULT_HOSTS), ",");
     String clusterName = getSettingValue(SearchConsts.ELASTIC_CLUSTER_NAME, DEFAULT_CLUSTERNAME);
     index = getSettingValue(SearchConsts.ELASTIC_INDEX, DEFAULT_INDEX);
     client = createTransportClient(hosts, clusterName);
+    
+    try {
+      prepareIndex(client);
+    } catch (IOException e) {
+      logger.error("Failed to prepare index", e);
+    }
+    
     setup();
   }
   
+  /**
+   * Returns setting value
+   * 
+   * @param key key
+   * @param defaultValue default value
+   * @return setting value
+   */
   private String getSettingValue(String key, String defaultValue) {
     String result = System.getProperty(key);
     if (StringUtils.isBlank(result)) {
@@ -67,7 +83,11 @@ public abstract class AbstractIndexHander {
   @PreDestroy
   public void deinit() {
     if (client != null) {
-      closeClient(client);
+      try {
+        closeClient(client);
+      } catch (IOException e) {
+        logger.error("Failed to close client", e);
+      }
     }
   }
   
@@ -88,7 +108,7 @@ public abstract class AbstractIndexHander {
    * 
    * @return elastic search client
    */
-  protected Client getClient() {
+  protected RestHighLevelClient getClient() {
     return client;
   }
   
@@ -144,117 +164,66 @@ public abstract class AbstractIndexHander {
    * 
    * @return initialized transport client
    */
-  private TransportClient createTransportClient(String[] hosts, String clusterName) {
-    try {
-      TransportClient transportClient;
-      Settings settings = Settings.builder()
-        .put("cluster.name", clusterName)
-        .build();
-      
-      transportClient = new PreBuiltTransportClient(settings);
-      
-      for (String host : hosts) {
-        String[] parts = StringUtils.split(host, ':');
-        if (parts.length != 2 || !NumberUtils.isDigits(parts[1])) {
-          logger.warn("Invalid elastic search host {}, dropped", host);
-        }
-        
-        String name = parts[0];
-        Integer port = NumberUtils.createInteger(parts[1]);
-        transportClient.addTransportAddress(resolveTransportAddress(name, port));
+  private RestHighLevelClient createTransportClient(String[] hosts, String clusterName) {
+    List<HttpHost> httpHosts = new ArrayList<>(hosts.length);
+    
+    for (String host : hosts) {
+      String[] parts = StringUtils.split(host, ':');
+      if (parts.length != 2 || !NumberUtils.isDigits(parts[1])) {
+        logger.warn("Invalid elastic search host {}, dropped", host);
       }
-  
-      prepareIndex(transportClient);
-
-      return transportClient;
-    } catch (Exception e) {
-      logger.error("Elastic client creation failed. All search functions are disbled", e);
-    }
-
-    return null;
-  }
-  
-  /**
-   * Returns transport address for name and port
-   * 
-   * @param name name
-   * @param port port
-   * @return transport address for name and port
-   * @throws UnknownHostException 
-   */
-  private TransportAddress resolveTransportAddress(String name, int port) {
-    return new TransportAddress(resolveInetAddress(name), port);
-  }
-  
-  /**
-   * Resolves inet address for a name
-   * 
-   * @param name
-   * @return inet address
-   */
-  private InetAddress resolveInetAddress(String name) {
-    try {
-      return InetAddress.getByName(name);
-    } catch (UnknownHostException e) {
-      logger.warn("Could resolve address {}, falling back to localhost", name, e);
+      
+      String name = parts[0];
+      Integer port = NumberUtils.createInteger(parts[1]);
+      
+      httpHosts.add(new HttpHost(name, port, "http"));
     }
     
-    try {
-      return InetAddress.getLocalHost();
-    } catch (UnknownHostException e) {
-      logger.error("Could not resolve localhost either", e);
-    }
-    
-    return null;
+    return new RestHighLevelClient(RestClient.builder(httpHosts.toArray(new HttpHost[0])));
   }
   
   /**
    * Closes transport client
    * 
-   * @param transportClient transport client
+   * @param client transport client
+   * @throws IOException 
    */
-  private void closeClient(TransportClient transportClient) {
-    transportClient.close();
+  private void closeClient(RestHighLevelClient client) throws IOException {
+    client.close();
   }
   
   /**
    * Prepares an index
    * 
-   * @param transportClient transport client
+   * @param client transport client
+   * @throws IOException 
    */
-  private void prepareIndex(TransportClient transportClient) {
-    if (!indexExists(transportClient)) {
-      createIndex(transportClient);
+  private void prepareIndex(RestHighLevelClient client) throws IOException {
+    if (!indexExists(client)) {
+      createIndex(client);
     }
   }
   
   /**
    * Checks whether the index exists or not
    * 
-   * @param transportClient transport client
+   * @param client transport client
    * @return whether the index exists or not
+   * @throws IOException 
    */
-  private boolean indexExists(TransportClient transportClient) {
-    return transportClient
-      .admin()
-      .indices()
-      .prepareExists(getIndex())
-      .execute()
-      .actionGet()
-      .isExists();
+  private boolean indexExists(RestHighLevelClient client) throws IOException {
+    GetIndexRequest request = new GetIndexRequest().indices(getIndex());
+    return client.indices().exists(request, RequestOptions.DEFAULT);
   }
 
   /**
    * Creates an index
    * 
-   * @param transportClient transport client
+   * @param client transport client
+   * @throws IOException 
    */
-  private void createIndex(TransportClient transportClient) {
-    transportClient
-      .admin()
-      .indices()
-      .prepareCreate(getIndex())
-      .execute()
-      .actionGet();
+  private void createIndex(RestHighLevelClient client) throws IOException {
+    CreateIndexRequest createIndexRequest = new CreateIndexRequest(getIndex());
+    client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
   }
 }

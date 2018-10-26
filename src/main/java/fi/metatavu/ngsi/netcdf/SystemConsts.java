@@ -7,6 +7,6 @@ package fi.metatavu.ngsi.netcdf;
  */
 public class SystemConsts {
   
-  public static final String INPUT_FILE_PROPERTY = "input-file";
+  public static final String DATA_STORE_FOLDER = "data-store-folder";
 
 }

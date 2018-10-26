@@ -1,4 +1,4 @@
-package fi.metatavu.ngsi.netcdf.search.updaters;
+package fi.metatavu.ngsi.netcdf.updater;
 
 import java.util.concurrent.TimeUnit;
 
@@ -8,27 +8,23 @@ import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 /**
- * Index initializer class
+ * Downloader class
  * 
  * @author Antti Leppä
  */
 @ApplicationScoped
 @Startup
 @Singleton
-public class Indexer {
+public class Downloader {
   
-  @Inject
-  private NetCdfFileUpdate netCdfFileUpdate;
-
   @Resource
   private ManagedScheduledExecutorService managedScheduledExecutorService;
   
   @PostConstruct
   public void init() {
-    managedScheduledExecutorService.scheduleWithFixedDelay(netCdfFileUpdate, 25, 2, TimeUnit.SECONDS);
+    managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, 60, TimeUnit.MINUTES);
   }
   
 }

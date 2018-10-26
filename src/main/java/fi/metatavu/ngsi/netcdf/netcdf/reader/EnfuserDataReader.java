@@ -1,4 +1,4 @@
-package fi.metatavu.ngsi.netcdf.netcdf;
+package fi.metatavu.ngsi.netcdf.netcdf.reader;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import fi.metatavu.ngsi.netcdf.SystemConsts;
 import fi.metatavu.ngsi.netcdf.fiware.AirPollutant;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityLevel;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityObserved;
@@ -24,6 +23,8 @@ import fi.metatavu.ngsi.netcdf.fiware.DateTime;
 import fi.metatavu.ngsi.netcdf.fiware.Location;
 import fi.metatavu.ngsi.netcdf.fiware.LocationValue;
 import fi.metatavu.ngsi.netcdf.fiware.Source;
+import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
+import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayFloat;
 import ucar.ma2.InvalidRangeException;
@@ -48,19 +49,17 @@ public class EnfuserDataReader {
   private String aqiVariableName;
   private String o3VariableName;
   
-  public EnfuserDataReader() {
+  EnfuserDataReader(File file) {
     this.no2VariableName = System.getProperty(EnfuserConsts.NO2_VARIABLE_PROPERTY);
     this.pm10VariableName = System.getProperty(EnfuserConsts.PM10_VARIABLE_PROPERTY);
     this.pm25VariableName = System.getProperty(EnfuserConsts.PM25_VARIABLE_PROPERTY);
     this.aqiVariableName = System.getProperty(EnfuserConsts.AQI_VARIABLE_PROPERTY);
     this.o3VariableName = System.getProperty(EnfuserConsts.O3_VARIABLE_PROPERTY);
-
+    
     try {
-      File file = new File(System.getProperty(SystemConsts.INPUT_FILE_PROPERTY));
       this.file = NetcdfFile.open(file.getAbsolutePath());
     } catch (IOException e) {
-      logger.error("Failed to read input file");
-      System.exit(-1);
+      logger.error("Failed to open NetCDF file", e);
     }
   }
   
@@ -142,6 +141,25 @@ public class EnfuserDataReader {
   public Array getLongitudeArray() throws IOException {
     Variable variable = getVariable(longitudeVariableName);
     return variable.read();
+  }
+
+  public Array getTimeArray() throws IOException {
+    Variable variable = getVariable(timeVariableName);
+    return variable.read();
+  }
+
+  /**
+   * Returns origin time of the NetCDF file
+   * 
+   * @return origin time of the NetCDF file
+   */
+  public OffsetDateTime getOriginTime() {
+    try {
+      return getOriginTime(getVariable(timeVariableName));
+    } catch (Exception e) {
+      logger.error("Failed to resolve origin time", e);
+      return null;
+    }
   }
   
   private Location createLoaction(EntryLocationReference locationReference) {

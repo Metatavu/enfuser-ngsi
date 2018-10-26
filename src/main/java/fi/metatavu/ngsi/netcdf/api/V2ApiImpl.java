@@ -38,8 +38,9 @@ import fi.metatavu.ngsi.netcdf.api.model.UpdateRequest;
 import fi.metatavu.ngsi.netcdf.api.model.UpdateSubscriptionRequest;
 import fi.metatavu.ngsi.netcdf.fiware.APIResources;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityObserved;
-import fi.metatavu.ngsi.netcdf.netcdf.EnfuserDataReader;
 import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReader;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderProvider;
 import fi.metatavu.ngsi.netcdf.query.Coordinates;
 import fi.metatavu.ngsi.netcdf.query.GeoRel;
 import fi.metatavu.ngsi.netcdf.query.Geometry;
@@ -186,7 +187,7 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
         GeoRel.fromString(georel), Geometry.fromParamName(geometry), Coordinates.fromString(coords),
         firstResult, maxResults);
 
-    EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
+    EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(null);
     
     List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, observedBefore, observedAfter);
 
@@ -443,7 +444,7 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
    * @return found entity or null if not found
    */
   private AirQualityObserved findAirQualityObservedById(String id) {
-    EnfuserDataReader enfuserDataReader = new EnfuserDataReader();
+    EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(null);
     OffsetDateTime time = OffsetDateTime.now();
 
     try {

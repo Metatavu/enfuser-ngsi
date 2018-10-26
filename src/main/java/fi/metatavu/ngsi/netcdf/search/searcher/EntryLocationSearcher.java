@@ -233,16 +233,17 @@ public class EntryLocationSearcher {
    * @return result
    */
   protected SearchResponse executeSearch(QueryBuilder query, String[] fields, Long firstResult, Long maxResults, List<SortBuilder<?>> sorts) {
-    SearchRequestBuilder requestBuilder = indexReader
-      .requestBuilder(getType())
-      .setQuery(query)
-      .storedFields(fields)
-      .setFrom(firstResult != null ? firstResult.intValue() : 0)
-      .setSize(maxResults != null ? maxResults.intValue() : DEFALT_MAX_RESULTS);
-
-    sorts.stream().forEach(requestBuilder::addSort);
-    
-    return indexReader.executeSearch(requestBuilder);
+//    SearchRequestBuilder requestBuilder = indexReader
+//      .requestBuilder(getType())
+//      .setQuery(query)
+//      .storedFields(fields)
+//      .setFrom(firstResult != null ? firstResult.intValue() : 0)
+//      .setSize(maxResults != null ? maxResults.intValue() : DEFALT_MAX_RESULTS);
+//
+//    sorts.stream().forEach(requestBuilder::addSort);
+//    
+//    return indexReader.executeSearch(requestBuilder);
+    return null;
   }
   
   /**
