@@ -9,6 +9,8 @@ import javax.ejb.Startup;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 
+import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
+
 /**
  * Downloader class
  * 
@@ -24,7 +26,9 @@ public class Downloader {
   
   @PostConstruct
   public void init() {
-    managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, 60, TimeUnit.MINUTES);
+    if (!"FALSE".equalsIgnoreCase(System.getProperty(EnfuserConsts.DOWNLOAD_PROPERTY))) {
+      managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, 60, TimeUnit.MINUTES);
+    }
   }
   
 }

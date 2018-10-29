@@ -13,7 +13,7 @@ public class EnfuserConsts {
   public static final String PM10_VARIABLE_PROPERTY = "enfuser-pm10";
   public static final String PM25_VARIABLE_PROPERTY = "enfuser-pm25";
   public static final String AQI_VARIABLE_PROPERTY = "enfuser-aqi";
-  public static final String O3_VARIABLE_PROPERTY = "enfuser-o3";
+  public static final String DOWNLOAD_PROPERTY = "enfuser-download";
   
   private EnfuserConsts() {
     // Private constructor
