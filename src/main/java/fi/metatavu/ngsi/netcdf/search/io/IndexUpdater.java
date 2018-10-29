@@ -10,7 +10,9 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import javax.ejb.AccessTimeout;
 import javax.ejb.Lock;
 import javax.ejb.LockType;
 import javax.ejb.Singleton;
@@ -58,7 +60,7 @@ public class IndexUpdater extends AbstractIndexHander {
    * 
    * @param indexables list of indexable entities
    */
-  @Lock (LockType.READ)
+  @AccessTimeout(unit = TimeUnit.MINUTES, value = 1)
   public void index(List<Indexable> indexables) {
     if (!isEnabled()) {
       logger.warn("Could not index entity. Search functions are disabled");

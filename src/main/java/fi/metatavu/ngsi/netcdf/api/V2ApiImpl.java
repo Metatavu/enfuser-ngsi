@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -40,7 +42,8 @@ import fi.metatavu.ngsi.netcdf.fiware.APIResources;
 import fi.metatavu.ngsi.netcdf.fiware.AirQualityObserved;
 import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
 import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReader;
-import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderProvider;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderFactory;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderMap;
 import fi.metatavu.ngsi.netcdf.query.Coordinates;
 import fi.metatavu.ngsi.netcdf.query.GeoRel;
 import fi.metatavu.ngsi.netcdf.query.Geometry;
@@ -54,6 +57,7 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
   
   private static final String SUPPORTED_TYPE = "AirQualityObserved";
   private static final String[] VIRTUAL_ATTRIBUTES = new String[] {"dateCreated", "dateModified"};
+  private static final String[] BUILT_IN_ATTRIBUTES = new String[] {"class"};
   
   @Inject
   private Logger logger;
@@ -183,15 +187,24 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     Long maxResults = limit != null ? limit.longValue() : 20l;
 
     List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(
-        id, idPattern,
+        id, idPattern, observedAfter, observedBefore,
         GeoRel.fromString(georel), Geometry.fromParamName(geometry), Coordinates.fromString(coords),
         firstResult, maxResults);
 
-    EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(null);
-    
-    List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, observedBefore, observedAfter);
+    List<String> filePaths = locationReferences.stream()
+        .map(EntryLocationReference::getFile)
+        .distinct()
+        .collect(Collectors.toList());
 
-    return Response.ok().entity(filterResultAttrs(result, attrs, options)).build();
+    try (EnfuserDataReaderMap readers = EnfuserDataReaderFactory.getReaders(filePaths)) {
+    
+      List<AirQualityObserved> result = locationReferences.stream()
+        .map(locationReference -> getAirQualityObserved(readers, locationReference))
+        .filter(Objects::nonNull)
+        .collect(Collectors.toList());
+
+      return Response.ok().entity(filterResultAttrs(result, attrs, options)).build();
+    }
   }
 
   @Override
@@ -308,6 +321,23 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
   }
 
   /**
+   * Gets air quality observed
+   * 
+   * @param readers map of data readers
+   * @param entryLocationReference entity location reference
+   * @return air quality observed
+   */
+  private AirQualityObserved getAirQualityObserved(Map<String, EnfuserDataReader> readers, EntryLocationReference entryLocationReference) {
+    try {
+      return readers.get(entryLocationReference.getFile()).getAirQualityObserved(entryLocationReference);
+    } catch (Exception e) {
+      logger.error("Error getting airquality observer", e);
+    }
+
+    return null;
+  }
+
+  /**
    * Filters results by attrs
    * 
    * @param results results
@@ -359,7 +389,7 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     List<String> excludeAttributes = includeAttributes.isEmpty() ? new ArrayList<>() :  Arrays.stream(propertyDescriptors)
       .map(PropertyDescriptor::getName)
       .filter((attr) -> {
-         return !ArrayUtils.contains(VIRTUAL_ATTRIBUTES, attr);
+        return !ArrayUtils.contains(VIRTUAL_ATTRIBUTES, attr);
       })
       .filter((attr) -> {
         return !includeAttributes.contains(attr);
@@ -375,6 +405,10 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
     excludeAttributes.addAll(excludeOptions);
 
     for (String excludedAttribute : excludeAttributes) {
+      if (Arrays.asList(BUILT_IN_ATTRIBUTES).contains(excludedAttribute)) {
+        continue;
+      }
+
       try {
         PropertyDescriptor propertyDescriptor = new PropertyDescriptor(excludedAttribute, AirQualityObserved.class);
         if (propertyDescriptor != null) {
@@ -444,16 +478,17 @@ public class V2ApiImpl extends AbstractApi implements V2Api {
    * @return found entity or null if not found
    */
   private AirQualityObserved findAirQualityObservedById(String id) {
-    EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(null);
-    OffsetDateTime time = OffsetDateTime.now();
-
     try {
-      List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(id, null, null, null, null, 0l, 1l);
-      List<AirQualityObserved> result = enfuserDataReader.getAirQualityObserved(locationReferences, null, null);
-
-      if (!result.isEmpty()) {
-        return result.get(0);
+      List<EntryLocationReference> locationReferences = entryLocationSearcher.searchEntryLocations(id, null, null, null, null, null, null, 0l, 1l);
+      if (locationReferences.isEmpty()) {
+        return null;
       }
+
+      EntryLocationReference locationReference = locationReferences.get(0);
+      try (EnfuserDataReader enfuserDataReader = EnfuserDataReaderFactory.getReader(locationReference.getFile())) {
+        return enfuserDataReader.getAirQualityObserved(locationReference);
+      }
+
     } catch (Exception e) {
       logger.error("Failed to find air quality entry", e);
     } 

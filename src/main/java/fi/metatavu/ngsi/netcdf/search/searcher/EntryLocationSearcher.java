@@ -1,25 +1,29 @@
 package fi.metatavu.ngsi.netcdf.search.searcher;
 
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.geoDisjointQuery;
 import static org.elasticsearch.index.query.QueryBuilders.geoDistanceQuery;
 import static org.elasticsearch.index.query.QueryBuilders.geoIntersectionQuery;
 import static org.elasticsearch.index.query.QueryBuilders.geoWithinQuery;
-import static org.elasticsearch.index.query.QueryBuilders.regexpQuery;
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
 import static org.elasticsearch.index.query.QueryBuilders.matchQuery;
+import static org.elasticsearch.index.query.QueryBuilders.rangeQuery;
+import static org.elasticsearch.index.query.QueryBuilders.regexpQuery;
 
+import java.io.File;
 import java.io.IOException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.common.geo.GeoPoint;
@@ -30,8 +34,10 @@ import org.elasticsearch.common.geo.builders.ShapeBuilder;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.sort.SortBuilder;
 
+import fi.metatavu.ngsi.netcdf.SystemConsts;
 import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
 import fi.metatavu.ngsi.netcdf.query.Coordinate;
 import fi.metatavu.ngsi.netcdf.query.Coordinates;
@@ -49,18 +55,26 @@ public class EntryLocationSearcher {
   @Inject
   private IndexReader indexReader;
   
+
   /**
    * Searches for entry locations
    * 
-   * @param id if defined, id must be exact match
-   * @param idPattern if defined, id must match pattern
-   * @param geoRel geo rel of geo query
-   * @param geometry geometry of geo query
-   * @param coordinates coordinates for geo query
-   * @return matching entry location references
-   * @throws IOException thrown when searching fails
+   * @param id id to search for (can be null)
+   * @param idPattern id pattern to search for (can be null)
+   * @param minTime min time for search entries
+   * @param maxTime max time for search entries
+   * @param geoRel georel
+   * @param geometry geometry to use
+   * @param coordinates coordinates to use
+   * @param firstResult first result
+   * @param maxResults max results
+   * 
+   * @return list of entry locations
+   * 
+   * @throws IOException
    */
-  public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, GeoRel geoRel, Geometry geometry, Coordinates coordinates, Long firstResult, Long maxResults) throws IOException {
+  @SuppressWarnings("squid:S00107")
+  public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, OffsetDateTime minTime, OffsetDateTime maxTime, GeoRel geoRel, Geometry geometry, Coordinates coordinates, Long firstResult, Long maxResults) throws IOException {
     BoolQueryBuilder query = boolQuery();
     
     if (StringUtils.isNotBlank(id)) {
@@ -70,6 +84,20 @@ public class EntryLocationSearcher {
     if (StringUtils.isNotBlank(idPattern)) {
       query.must(regexpQuery(EntryLocation.ID_FIELD, idPattern));
     }
+
+    if (minTime != null || maxTime != null) {
+      RangeQueryBuilder rangeQuery = rangeQuery(EntryLocation.TIME_FIELD);
+      
+      if (minTime != null) {
+        rangeQuery.gte(minTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+      }
+      
+      if (maxTime != null) {
+        rangeQuery.lte(maxTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME));
+      }    
+      
+      query.must(rangeQuery);
+    }
     
     // TODO: Max distance, mix distance
     
@@ -78,8 +106,28 @@ public class EntryLocationSearcher {
       query.must(geoQuery);
     }
     
-    SearchResponse searchResponse = executeSearch(query, firstResult, maxResults, EntryLocation.LAT_INDEX_FIELD, EntryLocation.LON_INDEX_FIELD);
-    
+    SearchResponse searchResponse = executeSearch(
+      query,
+      Arrays.asList(
+        EntryLocation.LAT_INDEX_FIELD,
+        EntryLocation.LON_INDEX_FIELD,
+        EntryLocation.TIME_INDEX_FIELD,
+        EntryLocation.FILE_FIELD
+      ),
+      firstResult,
+      maxResults,
+      Collections.emptyList());
+
+    return processSearchHits(searchResponse);
+  }
+
+  /**
+   * Creates EntryLocationReferences from SearchHits
+   * @param searchResponse search response
+   * 
+   * @return list of EntryLocationReferences
+   */
+  private List<EntryLocationReference> processSearchHits(SearchResponse searchResponse) {
     return Arrays.stream(searchResponse.getHits().getHits()).map((hit) -> {
       Map<String, DocumentField> fields = hit.getFields();
       
@@ -92,10 +140,24 @@ public class EntryLocationSearcher {
       if (longitudeIndexField == null) {
         return null;
       }
+
+      DocumentField timeIndexField = fields.get(EntryLocation.TIME_INDEX_FIELD);
+      if (timeIndexField == null) {
+        return null;
+      }
+
+      DocumentField fileField = fields.get(EntryLocation.FILE_FIELD);
+      if (fileField == null) {
+        return null;
+      }
       
-      return new EntryLocationReference(latitudeIndexField.getValue(), longitudeIndexField.getValue());
-    }).collect(Collectors.toList());
-    
+      File file = new File(System.getProperty(SystemConsts.DATA_STORE_FOLDER), fileField.getValue());
+      if (!file.exists()) {
+        return null;
+      }
+
+      return new EntryLocationReference(latitudeIndexField.getValue(), longitudeIndexField.getValue(), timeIndexField.getValue(), file.getAbsolutePath());
+    }).filter(Objects::nonNull).collect(Collectors.toList());
   }
 
   /**
@@ -141,18 +203,7 @@ public class EntryLocationSearcher {
     }
     return query;
   }
-  
-  /**
-   * Executes search
-   * 
-   * @param query query
-   * @param fields queried fields
-   * @return response
-   */
-  private SearchResponse executeSearch(QueryBuilder query, Long firstResult, Long maxResults, String... fields) {
-    return executeSearch(query, fields, firstResult, maxResults, Collections.emptyList());
-  }
-  
+
   /**
    * Returns geo shape
    * 
@@ -224,26 +275,20 @@ public class EntryLocationSearcher {
   }
   
   /**
-   * Executes a search and returns result as UUIDs
+   * Executes a search and returns search response
    * 
-   * @param query query
+   * @param query query object
+   * @param fields fields to return
    * @param firstResult first result
    * @param maxResults max results
-   * @param sorts 
-   * @return result
+   * @param sorts sort objects
+   *
+   * @return Search response
+   * 
+   * @throws IOException
    */
-  protected SearchResponse executeSearch(QueryBuilder query, String[] fields, Long firstResult, Long maxResults, List<SortBuilder<?>> sorts) {
-//    SearchRequestBuilder requestBuilder = indexReader
-//      .requestBuilder(getType())
-//      .setQuery(query)
-//      .storedFields(fields)
-//      .setFrom(firstResult != null ? firstResult.intValue() : 0)
-//      .setSize(maxResults != null ? maxResults.intValue() : DEFALT_MAX_RESULTS);
-//
-//    sorts.stream().forEach(requestBuilder::addSort);
-//    
-//    return indexReader.executeSearch(requestBuilder);
-    return null;
+  protected SearchResponse executeSearch(QueryBuilder query, List<String> fields, Long firstResult, Long maxResults, List<SortBuilder<?>> sorts) throws IOException {
+    return indexReader.executeSearch(getType(), query, fields, firstResult.intValue(), maxResults.intValue(), sorts);
   }
   
   /**

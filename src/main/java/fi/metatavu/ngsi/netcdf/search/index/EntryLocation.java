@@ -13,6 +13,7 @@ public class EntryLocation implements Indexable {
   public static final String LON_INDEX_FIELD = "lonIndex";
   public static final String TIME_INDEX_FIELD = "timeIndex";
   public static final String TIME_FIELD = "time";
+  public static final String FILE_FIELD = "file";
   
   @Field(type="keyword", store = true)
   private String entryId;

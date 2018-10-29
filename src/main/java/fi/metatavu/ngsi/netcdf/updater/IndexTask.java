@@ -22,12 +22,13 @@ import org.slf4j.Logger;
 
 import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
 import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReader;
-import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderProvider;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderFactory;
 import fi.metatavu.ngsi.netcdf.search.index.EntryLocation;
 import fi.metatavu.ngsi.netcdf.search.index.GeoPoint;
 import fi.metatavu.ngsi.netcdf.search.index.Indexable;
 import fi.metatavu.ngsi.netcdf.search.io.IndexUpdater;
-import ucar.ma2.Array;
+import ucar.ma2.ArrayFloat;
+import ucar.ma2.ArrayInt;
 
 /**
  * Listens for index messages
@@ -79,26 +80,25 @@ public class IndexTask implements MessageListener {
    * @param file file
    */
   private void indexLatitude(File file, int latitudeIndex) {
-    try {
-      EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(file);
-      Array latitudeArray = enfuserDataReader.getLatitudeArray();
-      Array longitudeArray = enfuserDataReader.getLongitudeArray();
-      Array timeArray = enfuserDataReader.getTimeArray();
+    try (EnfuserDataReader enfuserDataReader = EnfuserDataReaderFactory.getReader(file)) {
+      ArrayFloat.D1 latitudeArray = enfuserDataReader.getLatitudeArray();
+      ArrayFloat.D1 longitudeArray = enfuserDataReader.getLongitudeArray();
+      ArrayInt.D1 timeArray = enfuserDataReader.getTimeArray();
       
       int latitudeArraySize = (int) latitudeArray.getSize();
       int longitudeArraySize = (int) longitudeArray.getSize();
       int timeArraySize = (int) timeArray.getSize();
       OffsetDateTime originTime = enfuserDataReader.getOriginTime();
       
-      logger.info(String.format("Updating Enfuser data from latitudeIndex %d / %d", latitudeIndex, latitudeArraySize));
-       
+      logger.info(String.format("Updating Enfuser data %s from latitudeIndex %d / %d", file.getAbsolutePath(), latitudeIndex, latitudeArraySize));
+
       for (int timeIndex = 0; timeIndex < timeArraySize; timeIndex++) {
         List<Indexable> entryLocations = new ArrayList<>(longitudeArraySize);
         OffsetDateTime time = originTime.plusHours(timeIndex);
         
         for (int longitudeIndex = 0; longitudeIndex < longitudeArraySize; longitudeIndex++) {
-          Double latitude = latitudeArray.getDouble(latitudeIndex);
-          Double longitude = longitudeArray.getDouble(longitudeIndex);
+          Float latitude = latitudeArray.getFloat(latitudeIndex);
+          Float longitude = longitudeArray.getFloat(longitudeIndex);
           GeoPoint geoPoint = GeoPoint.createGeoPoint(latitude, longitude);
           String entryId = String.format(EnfuserConsts.ID_PATTERN, latitudeIndex, longitudeIndex, timeIndex);
           EntryLocation entryLocation = new EntryLocation(entryId, file.getName(), time, geoPoint, latitudeIndex, longitudeIndex, timeIndex);

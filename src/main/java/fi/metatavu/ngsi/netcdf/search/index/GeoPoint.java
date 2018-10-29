@@ -36,10 +36,6 @@ public class GeoPoint {
       return null;
     }
     
-    if (latitude == null || longitude == null) {
-      return null;
-    }
-    
     return new GeoPoint(latitude, longitude);
   }
   
@@ -51,6 +47,21 @@ public class GeoPoint {
    * @return GeoPoint
    */
   public static GeoPoint createGeoPoint(Double latitude, Double longitude) {
+    if (latitude == null || longitude == null) {
+      return null;
+    }
+    
+    return createGeoPoint(BigDecimal.valueOf(latitude), BigDecimal.valueOf(longitude));
+  }
+
+  /**
+   * Creates GeoPoint
+   * 
+   * @param longitude longitude
+   * @param longitude longitude
+   * @return GeoPoint
+   */
+  public static GeoPoint createGeoPoint(Float latitude, Float longitude) {
     if (latitude == null || longitude == null) {
       return null;
     }
