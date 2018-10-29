@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Date;
 
@@ -105,9 +104,8 @@ public class EnfuserDataReader implements AutoCloseable {
    * Reads latitude array from file
    * 
    * @return Latitude array
-   * @throws IOException
    */
-  public ArrayFloat.D1 getLatitudeArray() throws IOException {
+  public ArrayFloat.D1 getLatitudeArray() {
     Variable variable = getVariable(latitudeVariableName);
     return (ArrayFloat.D1) readArray(variable);
   }
@@ -116,9 +114,8 @@ public class EnfuserDataReader implements AutoCloseable {
    * Reads longitude array from file
    * 
    * @return Longitude array
-   * @throws IOException
    */
-  public ArrayFloat.D1 getLongitudeArray() throws IOException {
+  public ArrayFloat.D1 getLongitudeArray() {
     Variable variable = getVariable(longitudeVariableName);
     return (ArrayFloat.D1) readArray(variable);
   }
@@ -127,9 +124,8 @@ public class EnfuserDataReader implements AutoCloseable {
    * Reads time array from file
    * 
    * @return time array
-   * @throws IOException
    */
-  public ArrayInt.D1 getTimeArray() throws IOException {
+  public ArrayInt.D1 getTimeArray() {
     Variable variable = getVariable(timeVariableName);
     return (ArrayInt.D1) readArray(variable);
   }
@@ -251,33 +247,6 @@ public class EnfuserDataReader implements AutoCloseable {
     } catch (Exception e) {
       return null;
     }
-  }
-  
-  private int getTimeIndex(OffsetDateTime originTime, OffsetDateTime requestTime) throws Exception {  
-    return (int) ChronoUnit.HOURS.between(originTime, requestTime);
-  }
-  
-  /**
-   * Returns closest available time index for a time
-   * 
-   * @param originTime NetCDF start time
-   * @param requestTime requested time
-   * @return closest time index for requested time
-   * @throws Exception thrown when time resolving fails
-   */
-  private int getTimeIndexClosestTo(OffsetDateTime originTime, OffsetDateTime requestTime) throws Exception {
-    int airQualityHour = getTimeIndex(originTime, requestTime);
-    int maxIndex = timeVariableName.length() - 1;
-    
-    if (airQualityHour > maxIndex) {
-      return maxIndex;
-    }
-    
-    if (airQualityHour < 0) {
-      return 0;
-    }
-    
-    return airQualityHour;    
   }
   
   /**

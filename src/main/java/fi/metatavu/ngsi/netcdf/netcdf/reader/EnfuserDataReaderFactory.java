@@ -2,7 +2,6 @@ package fi.metatavu.ngsi.netcdf.netcdf.reader;
 
 import java.io.File;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -12,6 +11,10 @@ import java.util.stream.Collectors;
  */
 public class EnfuserDataReaderFactory {
   
+  private EnfuserDataReaderFactory() {
+    // Private constructor
+  }
+
   /**
    * Returns Enfuser data file reader for a file
    * 

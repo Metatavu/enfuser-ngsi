@@ -66,6 +66,7 @@ public class EntryLocationSearcher {
    * @return matching entry location references
    * @throws IOException thrown when searching fails
    */
+  @SuppressWarnings("squid:S00107")
   public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, OffsetDateTime minTime, OffsetDateTime maxTime, GeoRel geoRel, Geometry geometry, Coordinates coordinates, Long firstResult, Long maxResults) throws IOException {
     BoolQueryBuilder query = boolQuery();
     
@@ -110,6 +111,16 @@ public class EntryLocationSearcher {
       maxResults,
       Collections.emptyList());
 
+    return processSearchHits(searchResponse);
+  }
+
+  /**
+   * Creates EntryLocationReferences from SearchHits
+   * @param searchResponse search response
+   * 
+   * @return list of EntryLocationReferences
+   */
+  private List<EntryLocationReference> processSearchHits(SearchResponse searchResponse) {
     return Arrays.stream(searchResponse.getHits().getHits()).map((hit) -> {
       Map<String, DocumentField> fields = hit.getFields();
       
@@ -140,7 +151,6 @@ public class EntryLocationSearcher {
 
       return new EntryLocationReference(latitudeIndexField.getValue(), longitudeIndexField.getValue(), timeIndexField.getValue(), file.getAbsolutePath());
     }).filter(Objects::nonNull).collect(Collectors.toList());
-    
   }
 
   /**
