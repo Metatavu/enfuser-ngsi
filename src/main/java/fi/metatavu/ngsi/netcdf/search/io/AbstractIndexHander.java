@@ -33,7 +33,7 @@ public abstract class AbstractIndexHander {
   
   private static final String DEFAULT_INDEX = "enfuser-ngsi";
   private static final String DEFAULT_CLUSTERNAME = "elasticsearch";
-  private static final String DEFAULT_HOSTS = "192.168.2.125:9200,192.168.2.125:9201";
+  private static final String DEFAULT_HOSTS = "localhost:9200";
 
   @Inject
   private Logger logger;

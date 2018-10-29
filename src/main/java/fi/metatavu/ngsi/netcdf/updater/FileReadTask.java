@@ -20,7 +20,7 @@ import javax.jms.Session;
 import org.slf4j.Logger;
 
 import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReader;
-import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderProvider;
+import fi.metatavu.ngsi.netcdf.netcdf.reader.EnfuserDataReaderFactory;
 import ucar.ma2.Array;
 
 /**
@@ -60,22 +60,22 @@ public class FileReadTask implements MessageListener {
           return;
         }
         
-        EnfuserDataReader enfuserDataReader = EnfuserDataReaderProvider.getReader(file);
-        Array latitudeArray = enfuserDataReader.getLatitudeArray();
-        
-        int latitudeArraySize = (int) latitudeArray.getSize();
-        
-        Connection indexConnection = connectionFactory.createConnection();
-        Session indexSession = indexConnection.createSession();
-        MessageProducer indexProducer = indexSession.createProducer(indexQueue);
-        
-        for (int latitudeIndex = 0; latitudeIndex < latitudeArraySize; latitudeIndex++) {
-          MapMessage indexMessage = indexSession.createMapMessage();
-          indexMessage.setString(UpdaterConsts.INDEX_FILE, file.getAbsolutePath());
-          indexMessage.setInt(UpdaterConsts.INDEX_LATITUDE, latitudeIndex);
-          indexProducer.send(indexMessage);
+        try (EnfuserDataReader enfuserDataReader = EnfuserDataReaderFactory.getReader(file)) {
+          Array latitudeArray = enfuserDataReader.getLatitudeArray();
+          
+          int latitudeArraySize = (int) latitudeArray.getSize();
+          
+          Connection indexConnection = connectionFactory.createConnection();
+          Session indexSession = indexConnection.createSession();
+          MessageProducer indexProducer = indexSession.createProducer(indexQueue);
+          
+          for (int latitudeIndex = 0; latitudeIndex < latitudeArraySize; latitudeIndex++) {
+            MapMessage indexMessage = indexSession.createMapMessage();
+            indexMessage.setString(UpdaterConsts.INDEX_FILE, file.getAbsolutePath());
+            indexMessage.setInt(UpdaterConsts.INDEX_LATITUDE, latitudeIndex);
+            indexProducer.send(indexMessage);
+          }
         }
-        
       } catch (JMSException | IOException e) {
         logger.error("Failed to receive JMS message", e);
       }

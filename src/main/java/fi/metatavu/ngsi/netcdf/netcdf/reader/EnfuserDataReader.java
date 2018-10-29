@@ -6,12 +6,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,12 +23,13 @@ import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
 import fi.metatavu.ngsi.netcdf.netcdf.EntryLocationReference;
 import ucar.ma2.Array;
 import ucar.ma2.ArrayFloat;
+import ucar.ma2.ArrayInt;
 import ucar.ma2.InvalidRangeException;
 import ucar.nc2.NetcdfFile;
 import ucar.nc2.Variable;
 import ucar.nc2.units.DateUnit;
 
-public class EnfuserDataReader {
+public class EnfuserDataReader implements AutoCloseable {
 
   private static final String SOURCE = "https://en.ilmatieteenlaitos.fi/environmental-information-fusion-service";
   private static final String TYPE = "AirQualityObserved";
@@ -63,49 +60,20 @@ public class EnfuserDataReader {
     }
   }
   
-  public List<AirQualityObserved> getAirQualityObserved(List<EntryLocationReference> locationReferences, OffsetDateTime beforeTime, OffsetDateTime afterTime) throws Exception {
+  public AirQualityObserved getAirQualityObserved(EntryLocationReference locationReference) throws Exception {
     Variable timeVariable = getVariable(timeVariableName);
     OffsetDateTime originTime = getOriginTime(timeVariable);
-    
-    int fromTimeIndex;
-    int toTimeIndex;
-    
-    if (beforeTime != null || afterTime != null) {
-      fromTimeIndex = afterTime != null ? getTimeIndex(originTime, afterTime) : 0;
-      toTimeIndex = beforeTime != null ? getTimeIndex(originTime, beforeTime) : timeVariableName.length() - 1;
-    } else {
-      OffsetDateTime now = OffsetDateTime.now();
-      fromTimeIndex = getTimeIndexClosestTo(originTime, now);
-      toTimeIndex = getTimeIndexClosestTo(originTime, now);
-    }
 
-    List<AirQualityObserved> result = new ArrayList<>();
-    
-    for (int timeIndex = fromTimeIndex; timeIndex <= toTimeIndex; timeIndex++) {
-      result.addAll(getAirQualityObservedForTime(locationReferences, originTime, timeIndex));
-    }
-    
-    return result;
-  }
-
-  private List<AirQualityObserved> getAirQualityObservedForTime(List<EntryLocationReference> locationReferences, OffsetDateTime originTime, int timeIndex) {
-    OffsetDateTime sampleTime = originTime.plusHours(timeIndex);
-    
-    return locationReferences.stream()
-      .map((locationReference) -> {
-        return getAirQualityObserved(locationReference, originTime, sampleTime, timeIndex);
-      })
-      .filter(Objects::nonNull)
-      .collect(Collectors.toList());
+    return getAirQualityObserved(locationReference, originTime, originTime.plusHours(locationReference.getTimeIndex()));
   }
   
-  private AirQualityObserved getAirQualityObserved(EntryLocationReference locationReference, OffsetDateTime originTime, OffsetDateTime sampleTime, int timeIndex) {
+  private AirQualityObserved getAirQualityObserved(EntryLocationReference locationReference, OffsetDateTime originTime, OffsetDateTime sampleTime) {
     try {
-      Float no2 = getComponentValue(no2VariableName, locationReference, timeIndex);
-      Float pm10 = getComponentValue(pm10VariableName, locationReference, timeIndex);
-      Float pm25 = getComponentValue(pm25VariableName, locationReference, timeIndex);
-      Float o3 = getComponentValue(o3VariableName, locationReference, timeIndex);
-      Float aqi = getComponentValue(aqiVariableName, locationReference, timeIndex);
+      Float no2 = getComponentValue(no2VariableName, locationReference);
+      Float pm10 = getComponentValue(pm10VariableName, locationReference);
+      Float pm25 = getComponentValue(pm25VariableName, locationReference);
+      Float o3 = getComponentValue(o3VariableName, locationReference);
+      Float aqi = getComponentValue(aqiVariableName, locationReference);
       
       return createAirQualityObserved(locationReference, originTime, sampleTime, no2, pm10, pm25, o3, aqi);
     } catch (Exception e) {
@@ -116,7 +84,7 @@ public class EnfuserDataReader {
 
   private AirQualityObserved createAirQualityObserved(EntryLocationReference locationReference, OffsetDateTime originTime, OffsetDateTime sampleTime, Float no2, Float pm10, Float pm25, Float o3, Float aqi) {
     AirQualityObserved airQualityObserved = new AirQualityObserved();
-    airQualityObserved.setId(String.format(EnfuserConsts.ID_PATTERN, locationReference.getLatIndex(), locationReference.getLonIndex()));
+    airQualityObserved.setId(String.format(EnfuserConsts.ID_PATTERN, locationReference.getLatIndex(), locationReference.getLonIndex(), locationReference.getTimeIndex()));
     airQualityObserved.setAirQualityIndex(createAirPollutant(aqi));
     airQualityObserved.setNo2(createAirPollutant(no2));
     airQualityObserved.setPm10(createAirPollutant(pm10));
@@ -133,19 +101,37 @@ public class EnfuserDataReader {
     return airQualityObserved;
   }
 
-  public Array getLatitudeArray() throws IOException {
+  /**
+   * Reads latitude array from file
+   * 
+   * @return Latitude array
+   * @throws IOException
+   */
+  public ArrayFloat.D1 getLatitudeArray() throws IOException {
     Variable variable = getVariable(latitudeVariableName);
-    return variable.read();
+    return (ArrayFloat.D1) readArray(variable);
   }
 
-  public Array getLongitudeArray() throws IOException {
+  /**
+   * Reads longitude array from file
+   * 
+   * @return Longitude array
+   * @throws IOException
+   */
+  public ArrayFloat.D1 getLongitudeArray() throws IOException {
     Variable variable = getVariable(longitudeVariableName);
-    return variable.read();
+    return (ArrayFloat.D1) readArray(variable);
   }
 
-  public Array getTimeArray() throws IOException {
+  /**
+   * Reads time array from file
+   * 
+   * @return time array
+   * @throws IOException
+   */
+  public ArrayInt.D1 getTimeArray() throws IOException {
     Variable variable = getVariable(timeVariableName);
-    return variable.read();
+    return (ArrayInt.D1) readArray(variable);
   }
 
   /**
@@ -191,6 +177,22 @@ public class EnfuserDataReader {
     return null;
   }
   
+  /**
+   * Reads array from variable
+   * 
+   * @param variable variable to read
+   * @return Array of values or null if unsuccesfull
+   */
+  private Array readArray(Variable variable) {
+    try {
+      return variable.read(null, variable.getShape());
+    } catch (IOException | InvalidRangeException e) {
+      logger.error("Error reading array from variable", e);
+    }
+
+    return null;
+  }
+
   private Float getSingleFloat(Variable variable, int index) throws IOException, InvalidRangeException {
     ArrayFloat.D1 latitudeArray = (ArrayFloat.D1) variable.read(new int[] { index }, new int[] { 1 });
     if (latitudeArray.getSize() > 0) {
@@ -234,14 +236,14 @@ public class EnfuserDataReader {
     return null;
   }
 
-  private Float getComponentValue(String variableName, EntryLocationReference locationReference, int timeIndex) throws IOException, InvalidRangeException {
+  private Float getComponentValue(String variableName, EntryLocationReference locationReference) throws IOException, InvalidRangeException {
     try {
       Variable variable = getVariable(variableName);
       if (variable == null) {
         return null; 
       }
-  
-      int[] origin = new int[] { timeIndex, locationReference.getLatIndex(), locationReference.getLonIndex() };
+
+      int[] origin = new int[] { locationReference.getTimeIndex(), locationReference.getLatIndex(), locationReference.getLonIndex() };
       int[] shape = new int[] { 1, 1, 1 };
       ArrayFloat.D3 array = (ucar.ma2.ArrayFloat.D3) variable.read(origin, shape);
       
@@ -326,6 +328,11 @@ public class EnfuserDataReader {
    */
   private Variable getVariable(String variableName) {
     return file.findVariable(variableName);
+  }
+
+  @Override
+  public void close() throws IOException {
+    file.close();
   }
  
 }
