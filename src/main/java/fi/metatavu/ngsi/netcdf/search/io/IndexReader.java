@@ -27,10 +27,36 @@ public class IndexReader extends AbstractIndexHander {
     // No setup needed for reader
   }
 
+  /**
+   * Executes search
+   * 
+   * @param type type to search for
+   * @param query query object
+   * @param fields returned fields
+   * @param from first result
+   * @param size max results
+   * @param sorts sort objects
+   * 
+   * @return search response
+   * 
+   * @throws IOException
+   */
   public SearchResponse executeSearch(String type, QueryBuilder query, List<String> fields, int from, int size, List<SortBuilder<?>> sorts) throws IOException {
     return getClient().search(getSearchRequest(type, query, fields, from, size, sorts), RequestOptions.DEFAULT);
   }
 
+  /**
+   * Builds search request
+   * 
+   * @param type type to search for
+   * @param query query object
+   * @param fields returned fields
+   * @param from first result
+   * @param size max results
+   * @param sorts sort objects
+   *
+   * @return search request
+   */
   private SearchRequest getSearchRequest(String type, QueryBuilder query, List<String> fields, int from, int size, List<SortBuilder<?>> sorts) {
     SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
     sourceBuilder.query(query);

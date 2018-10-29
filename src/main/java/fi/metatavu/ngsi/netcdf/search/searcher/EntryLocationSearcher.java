@@ -55,16 +55,23 @@ public class EntryLocationSearcher {
   @Inject
   private IndexReader indexReader;
   
+
   /**
    * Searches for entry locations
    * 
-   * @param id if defined, id must be exact match
-   * @param idPattern if defined, id must match pattern
-   * @param geoRel geo rel of geo query
-   * @param geometry geometry of geo query
-   * @param coordinates coordinates for geo query
-   * @return matching entry location references
-   * @throws IOException thrown when searching fails
+   * @param id id to search for (can be null)
+   * @param idPattern id pattern to search for (can be null)
+   * @param minTime min time for search entries
+   * @param maxTime max time for search entries
+   * @param geoRel georel
+   * @param geometry geometry to use
+   * @param coordinates coordinates to use
+   * @param firstResult first result
+   * @param maxResults max results
+   * 
+   * @return list of entry locations
+   * 
+   * @throws IOException
    */
   @SuppressWarnings("squid:S00107")
   public List<EntryLocationReference> searchEntryLocations(String id, String idPattern, OffsetDateTime minTime, OffsetDateTime maxTime, GeoRel geoRel, Geometry geometry, Coordinates coordinates, Long firstResult, Long maxResults) throws IOException {
@@ -268,13 +275,16 @@ public class EntryLocationSearcher {
   }
   
   /**
-   * Executes a search and returns result as UUIDs
+   * Executes a search and returns search response
    * 
-   * @param query       query
+   * @param query query object
+   * @param fields fields to return
    * @param firstResult first result
-   * @param maxResults  max results
-   * @param sorts
-   * @return result
+   * @param maxResults max results
+   * @param sorts sort objects
+   *
+   * @return Search response
+   * 
    * @throws IOException
    */
   protected SearchResponse executeSearch(QueryBuilder query, List<String> fields, Long firstResult, Long maxResults, List<SortBuilder<?>> sorts) throws IOException {
