@@ -61,6 +61,7 @@ public class IndexUpdater extends AbstractIndexHander {
    * @param indexables list of indexable entities
    */
   @AccessTimeout(unit = TimeUnit.MINUTES, value = 1)
+  @Lock (LockType.READ)
   public void index(List<Indexable> indexables) {
     if (!isEnabled()) {
       logger.warn("Could not index entity. Search functions are disabled");
