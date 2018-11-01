@@ -37,7 +37,8 @@ import ucar.ma2.ArrayInt;
  */
 @MessageDriven(
   activationConfig = { 
-    @ActivationConfigProperty(propertyName = "destinationLookup", propertyValue = "java:/jms/queue/enfuserindex")
+    @ActivationConfigProperty(propertyName = "destinationLookup", propertyValue = "java:/jms/queue/enfuserindex"),
+    @ActivationConfigProperty(propertyName = "maxConcurrency", propertyValue = "3")
   }
 )
 public class IndexTask implements MessageListener {
