@@ -9,6 +9,8 @@ import javax.ejb.Startup;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 
+import org.apache.commons.lang3.math.NumberUtils;
+
 import fi.metatavu.ngsi.netcdf.netcdf.EnfuserConsts;
 
 /**
@@ -27,7 +29,7 @@ public class Downloader {
   @PostConstruct
   public void init() {
     if (!"FALSE".equalsIgnoreCase(System.getProperty(EnfuserConsts.DOWNLOAD_PROPERTY))) {
-      managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, 60, TimeUnit.MINUTES);
+      managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, NumberUtils.createInteger(System.getProperty(EnfuserConsts.DOWNLOAD_PROPERTY, "160")), TimeUnit.MINUTES);
     }
   }
   
