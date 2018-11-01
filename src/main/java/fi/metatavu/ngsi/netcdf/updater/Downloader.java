@@ -29,7 +29,7 @@ public class Downloader {
   @PostConstruct
   public void init() {
     if (!"FALSE".equalsIgnoreCase(System.getProperty(EnfuserConsts.DOWNLOAD_PROPERTY))) {
-      managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, NumberUtils.createInteger(System.getProperty(EnfuserConsts.DOWNLOAD_PROPERTY, "160")), TimeUnit.MINUTES);
+      managedScheduledExecutorService.scheduleAtFixedRate(new DownloadTask(), 1, NumberUtils.createInteger(System.getProperty(EnfuserConsts.DOWNLOAD_INTERVAL_PROPERTY, "160")), TimeUnit.MINUTES);
     }
   }
   

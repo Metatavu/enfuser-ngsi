@@ -15,6 +15,7 @@ public class EnfuserConsts {
   public static final String AQI_VARIABLE_PROPERTY = "enfuser-aqi";
   public static final String O3_VARIABLE_PROPERTY = "enfuser-o3";
   public static final String DOWNLOAD_PROPERTY = "enfuser-download";
+  public static final String DOWNLOAD_INTERVAL_PROPERTY = "enfuser-download-interval";
   
   private EnfuserConsts() {
     // Private constructor
